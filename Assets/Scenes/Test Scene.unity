@@ -541,7 +541,7 @@ MonoBehaviour:
   m_LockStageInInspector: 
   m_StreamingVersion: 20170927
   m_Priority: 10
-  m_StandbyUpdate: 2
+  m_StandbyUpdate: 1
   m_LookAt: {fileID: 543450652255258066}
   m_Follow: {fileID: 543450652255258066}
   m_Lens:
@@ -2143,6 +2143,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   movementSpeed: 5
   rotationSpeed: 500
+  captureHoldTime: 10
   animator: {fileID: 919132148316856170}
 --- !u!95 &919132148316856170
 Animator:

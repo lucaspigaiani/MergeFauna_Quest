@@ -70,6 +70,8 @@ public class PlayerController : MonoBehaviour
         {
             // Reset the capture timer when the space key is released
             captureTimer = 0f;
+            animator.SetBool("ResetCapturing", true);
+            animator.SetBool("IsCapturing", false);
             isCapturing = false;
         }
     }
@@ -80,6 +82,7 @@ public class PlayerController : MonoBehaviour
         if (isCapturing == false)
         {
             animator.SetBool("IsCapturing", true);
+            animator.SetBool("ResetCapturing", false);
         }
 
         // Set the capturing flag to true
@@ -91,6 +94,7 @@ public class PlayerController : MonoBehaviour
         // Play the captured animation
         animator.SetBool("IsCapturing", false);
         animator.SetBool("IsCaptured", true);
+        animator.SetBool("ResetCapturing", false);
 
         // Reset the capturing flag
         isCapturing = false;
