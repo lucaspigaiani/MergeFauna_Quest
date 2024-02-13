@@ -18,10 +18,9 @@ public class Animal : MonoBehaviour
 
     public float walkingRadius = 10f; // Radius for random walking
     public GameObject target;
-    public float runAwayDistance = 10f; // Distance at which the animal starts running away from the player
+    public float runAwayDistance = 20f; // Distance at which the animal starts running away from the player
     public float alphaAnimationDuration = 0.5f; // Duration of the alpha animation in seconds
     public Image captureBarFillImage; // Reference to the UI image representing the fill bar
-
 
     public enum AnimalState
     {
@@ -58,10 +57,14 @@ public class Animal : MonoBehaviour
         StartCoroutine(ChangeAnimationState(0f));
     }
 
-
     protected virtual void Update()
     {
-            
+        if (percentageCaptured >= 1f)
+        {
+            player.GetComponent<PlayerController>().captureAnimalEvent.Invoke();
+        }
+
+        Debug.Log($"RunAwayFromPlayer!");
 
         // Check conditions for setting the current state based on other factors
         if (percentageCaptured > 0f)
@@ -112,7 +115,6 @@ public class Animal : MonoBehaviour
         }
     }
 
-
     protected virtual void PlayAnimation()
     {
         switch (currentState)
@@ -143,7 +145,6 @@ public class Animal : MonoBehaviour
             animator.SetBool("IsIdle", false);
             animator.SetBool("IsIdleVariation", true);
         }
-
     }
 
     protected virtual void Walk()
@@ -157,10 +158,6 @@ public class Animal : MonoBehaviour
         navMeshAgent.isStopped = false;
 
         navMeshAgent.speed = 3.5f;
-        /* if (navMeshAgent.remainingDistance < 0.1f)
-         {
-             SetRandomDestination();
-         }*/
     }
 
     private void SetRandomDestination()
@@ -194,7 +191,7 @@ public class Animal : MonoBehaviour
         // Play navmeshAgent
         navMeshAgent.isStopped = false;
 
-        navMeshAgent.speed = 5f;
+        navMeshAgent.speed = 4f;
 
         Debug.Log("Animal is running away from the player.");
     }
@@ -219,19 +216,13 @@ public class Animal : MonoBehaviour
 
     protected virtual void UpdateCaptureBarUI()
     {
-       
-
         if (Vector3.Distance(transform.position, player.transform.position) > runAwayDistance)
         {
             // Decrease percentage captured over time 
             percentageCaptured -= Time.deltaTime;
         }
-        else
-        {
-           
-        }
+       
         // Update the UI fill bar based on the percentage captured
-
         captureBarFillImage.fillAmount = percentageCaptured / 100f; // Assuming the bar ranges from 0 to 1
     }
 
@@ -252,10 +243,8 @@ public class Animal : MonoBehaviour
         targetCanvasGroup.alpha = targetAlpha;
     }
 
-
     protected IEnumerator ChangeAnimationState(float waitTime) 
     {
-
         yield return new WaitForSeconds(waitTime);
 
        if (currentState == AnimalState.Idle)
