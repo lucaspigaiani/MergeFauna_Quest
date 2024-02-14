@@ -7,23 +7,39 @@ public class PlayerController : MonoBehaviour
 { 
     public float movementSpeed = 5f;
     public float rotationSpeed = 500f;
-    public float captureHoldTime = 10f; // Time to hold space for capturing
     public Animator animator;
     private CharacterController characterController;
     private bool isCapturing = false;
-    private float captureTimer = 0f;
     public GameObject animalRope;
     public GameObject coneArea;
-    private bool preventCapture;
+    public ParticleSystem levelUpParticle;
 
+    public Animal captureTarget;
 
+    public bool canCapture = true;
+    public GameObject canvas;
+
+    // List to store animals
+    public List<Animal> animalList = new List<Animal>();
 
     public UnityEvent captureAnimalEvent;
 
     private void Captured() 
     {
         Debug.Log("Captured event!");
+
+        startCapture = false;
+        resetCapture = true;
+
+        levelUpParticle.Play();
+
+        animalList.Add(captureTarget);
+        if (animalList.Count == 2)
+        {
+            canCapture = false;
+        }
     }
+
     void Start()
     {
         characterController = GetComponent<CharacterController>();
@@ -34,11 +50,6 @@ public class PlayerController : MonoBehaviour
     {
         Movement();
         CaptureAction();
-
-        if (Input.anyKeyDown && captureAnimalEvent != null)
-        {
-            captureAnimalEvent.Invoke();
-        }
     }
 
     private void Movement()
@@ -73,34 +84,22 @@ public class PlayerController : MonoBehaviour
         characterController.Move(movement * movementSpeed * Time.deltaTime);
     }
 
+    bool startCapture;
+    bool resetCapture;
     private void CaptureAction()
     {
         // Check for capturing input
-        if (Input.GetKey(KeyCode.Space))
+        if (startCapture == true)
         {
-            if (preventCapture == true)
-            {
-                // Call the capturing method
-                Capturing();
-
-                // Check if the player has held down the space key for ten seconds
-                if (isCapturing)
-                {
-                    captureTimer += Time.deltaTime;
-
-                    if (captureTimer >= captureHoldTime)
-                    {
-                        // Call the captured method
-                        ResetCapture();
-                        preventCapture = false;
-                    }
-                }
-            }
+            // Call the capturing method
+            Capturing();
         }
-        else if (Input.GetKeyUp(KeyCode.Space))
+
+        if (resetCapture == true)
         {
             // Reset the capture timer when the space key is released
             ResetCapture();
+            resetCapture = false;
         }
     }
 
@@ -113,20 +112,95 @@ public class PlayerController : MonoBehaviour
             animator.SetBool("ResetCapturing", false);
             animalRope.gameObject.SetActive(true);
             coneArea.gameObject.SetActive(true);
+            // Set the capturing flag to true
+            isCapturing = true;
         }
 
-        // Set the capturing flag to true
-        isCapturing = true;
+        var lookDir = (transform.position - captureTarget.transform.position) * -1;
+        lookDir.y = 0; // keep only the horizontal direction
+        coneArea.transform.rotation = Quaternion.LookRotation(lookDir);
+
     }
 
     void ResetCapture()
     {
-        captureTimer = 0f;
         animator.SetBool("ResetCapturing", true);
         animator.SetBool("IsCapturing", false);
         animalRope.gameObject.SetActive(false);
         coneArea.gameObject.SetActive(false);
         isCapturing = false;
-        preventCapture = true;
+    }
+
+    public bool CheckAnimalList() 
+    {
+        if (animalList.Count > 0)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.tag.Equals("Animal"))
+        {
+            if (canCapture == false)
+            {
+                canvas.SetActive(true);
+            }
+            else
+            {
+                if (captureTarget == null)
+                {
+                    captureTarget = other.GetComponent<Animal>();
+                    startCapture = true;
+                    resetCapture = false;
+                }
+            }
+        }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.tag.Equals("Animal"))
+        {
+            if (canCapture == false)
+            {
+                canvas.SetActive(true);
+            }
+            else
+            {
+                if (captureTarget == null)
+                {
+                    captureTarget = other.GetComponent<Animal>();
+                    startCapture = true;
+                    resetCapture = false;
+                }
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.tag.Equals("Animal"))
+        {
+            if (canCapture == false)
+            {
+                canvas.SetActive(false);
+            }
+            else
+            {
+                if (captureTarget == other.GetComponent<Animal>())
+                {
+                    Debug.Log("OnTriggerExit");
+                    captureTarget = null;
+                    startCapture = false;
+                    resetCapture = true;
+                }
+            }
+        }
     }
 }
