@@ -17,7 +17,6 @@ public class Animal : MonoBehaviour
     protected float minimumWalkDistance = 3;
 
     public float walkingRadius = 10f; // Radius for random walking
-    public GameObject target;
     public float runAwayDistance = 20f; // Distance at which the animal starts running away from the player
     public float alphaAnimationDuration = 0.5f; // Duration of the alpha animation in seconds
     public Image captureBarFillImage; // Reference to the UI image representing the fill bar
@@ -165,8 +164,6 @@ public class Animal : MonoBehaviour
         // Generate a random point within the walking radius
         Vector2 randomPoint = Random.insideUnitCircle * walkingRadius;
         Vector3 randomDestination = new Vector3(randomPoint.x, 0f, randomPoint.y) + transform.position;
-
-        target.transform.position = randomDestination;
 
         // Check if the distance to the random destination is greater than the minimum walk distance
         if (Vector3.Distance(transform.position, randomDestination) > minimumWalkDistance)
