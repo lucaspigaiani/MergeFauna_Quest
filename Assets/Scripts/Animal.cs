@@ -38,7 +38,7 @@ public class Animal : MonoBehaviour
     public AnimalState currentState;
 
     // Constants for chance of variation
-    private const float WalkingVariationChance = 0.25f; // 25% chance of variation
+    private const float WalkingVariationChance = 0.50f; // 50% chance of variation
     private const float IdleVariationChance = 0.1f; // 10% chance of variation
     private const float MinAnimationTime = 3f; // Minimum time to stay on a animation state
     private const float MaxAnimationTime = 6f; // Max time to stay on a animation state

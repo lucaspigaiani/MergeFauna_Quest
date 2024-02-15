@@ -45,11 +45,13 @@ public class ParabolaEffect : MonoBehaviour
         {
             // Ensure the object reaches the target position
             transform.position = targetPosition;
-            transform.localScale = Vector3.zero;
+            transform.localScale = new Vector3(finalScale, finalScale, finalScale);
 
             // Optionally, you can destroy the object or deactivate it after reaching the target
             // Destroy(gameObject);
             // gameObject.SetActive(false);
+            this.enabled = false;
         }
+
     }
 }
