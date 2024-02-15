@@ -1,6 +1,6 @@
 # MergeFauna Quest
 
-Welcome to the Animal Capture Game project! This is a Unity game where players can capture animals by approaching them within a certain distance.
+Welcome to the MergeFauna Quest project! This is a Unity game where players can capture animals by approaching them within a certain distance.
 
 ## Getting Started
 
