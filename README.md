@@ -7,7 +7,6 @@ Welcome to the MergeFauna Quest project! This is a Unity game where players can 
 ### Prerequisites
 
 - Unity version 2021.3.24
-- (Any other dependencies your project might have)
 
 ### Installation
 
