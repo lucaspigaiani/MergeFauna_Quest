@@ -1,50 +1,56 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.AI;
 
 public class StationController : MonoBehaviour
 {
+    // References to other controllers and objects
     private PlayerController playerController;
     private XPController xPController;
+
+    // Delivery points for spawned animals
     public Transform[] deliveryPoint;
 
+    // Timer and flags for rotation and movement
     private float timer = 0f;
     private bool spawn = true;
-    private float rotationSpeed = 5.0f; // Adjust this speed as needed
-    private float scaleReductionSpeed = 1.0f; // Adjust this speed as needed
     private bool startToRotate;
     private bool moveObjectsToCenter;
 
+    // Rotation and scaling parameters
+    private float rotationSpeed = 5.0f;
+    private float scaleReductionSpeed = 1.0f;
+    private float scaleIncreaseRate = 0.1f;
+    private float maxScale = 0.5f;
+    private float currentScale = 0f;
+
+    // Objects in the station
     public GameObject leftStationAnimal;
     public GameObject rightStationAnimal;
 
+    // Prefabs for station animals
     public GameObject stationBeetlePrefab;
     public GameObject stationElephantPrefab;
 
+    // Particle system for merging
     public ParticleSystem mergeParticle;
 
+    // Beetlephant object and flags
     public GameObject beetlephantObject;
-    public float scaleIncreaseRate = 0.1f;
-    public float maxScale = 0.5f;
-
-    private float currentScale = 0f;
 
     private void Start()
     {
-        // Get the PlayerController component from the player GameObject
+        // Get references to other controllers
         playerController = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
         xPController = GameObject.FindGameObjectWithTag("XPController").GetComponent<XPController>();
-
     }
 
     private void Update()
     {
+        // Check and perform rotation and movement when necessary
         if (startToRotate == true)
         {
             TurnObjectsToFaceEachOther();
-            
         }
         if (moveObjectsToCenter == true)
         {
@@ -52,54 +58,51 @@ public class StationController : MonoBehaviour
         }
     }
 
+    // Coroutine to set the startToRotate flag
     IEnumerator SetStartToRotate()
     {
         yield return new WaitForSeconds(1f);
         startToRotate = true;
+        // Start the next coroutine to move objects to the center
         StartCoroutine(SetMoveObjectsToCenter());
-    } 
-    
+    }
+
+    // Coroutine to set the moveObjectsToCenter flag
     IEnumerator SetMoveObjectsToCenter()
     {
         yield return new WaitForSeconds(1f);
         moveObjectsToCenter = true;
+        // Play merge particle effect
         mergeParticle.Play();
+        // Start the next coroutine to end the merge process
         StartCoroutine(EndMerge());
     }
 
+    // Coroutine to end the merge process
     IEnumerator EndMerge()
     {
         yield return new WaitForSeconds(1f);
-      
-        if (leftStationAnimal.name.Equals("Station Beetle"))
-        {
-            xPController.AddXP(Animal.AnimalEspecies.Beetle);
-        }
-        else
-        {
-            xPController.AddXP(Animal.AnimalEspecies.Elephant);
-        }
 
-        if (rightStationAnimal.name.Equals("Station Beetle"))
-        {
-            xPController.AddXP(Animal.AnimalEspecies.Beetle);
-        }
-        else
-        {
-            xPController.AddXP(Animal.AnimalEspecies.Elephant);
-        }
+        // Add XP based on the animals in the left and right stations
+        AddXPFromStationAnimal(leftStationAnimal);
+        AddXPFromStationAnimal(rightStationAnimal);
 
+        // Destroy the animals in the stations
         Destroy(leftStationAnimal);
         Destroy(rightStationAnimal);
+
+        // Reset flags
         startToRotate = false;
         moveObjectsToCenter = false;
 
+        // If the beetlephantObject is not active, turn it on and scale it
         if (beetlephantObject.activeInHierarchy == false)
         {
             StartCoroutine(TurnOnAndScaleBeetlephant());
         }
     }
 
+    // Coroutine to turn on and scale the beetlephantObject
     IEnumerator TurnOnAndScaleBeetlephant()
     {
         // Instantiate the Beetlephant object if not assigned
@@ -125,10 +128,9 @@ public class StationController : MonoBehaviour
 
         // Ensure the final scale is exactly the maxScale
         beetlephantObject.transform.localScale = new Vector3(maxScale, maxScale, maxScale);
-
-        Debug.Log("Beetlephant activation and scaling complete!");
     }
 
+    // Rotate the left and right station animals to face each other
     private void TurnObjectsToFaceEachOther()
     {
         if (leftStationAnimal != null && rightStationAnimal != null)
@@ -136,17 +138,22 @@ public class StationController : MonoBehaviour
             // Calculate the direction from leftStationAnimal to rightStationAnimal
             Vector3 direction = rightStationAnimal.transform.position - leftStationAnimal.transform.position;
 
-            // Calculate the rotation to face rightStationAnimal
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            // Check if the direction vector is not exactly zero
+            if (direction != Vector3.zero)
+            {
+                // Calculate the rotation to face rightStationAnimal
+                Quaternion targetRotation = Quaternion.LookRotation(direction);
 
-            // Gradually rotate leftStationAnimal to face rightStationAnimal
-            leftStationAnimal.transform.rotation = Quaternion.Slerp(leftStationAnimal.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                // Gradually rotate leftStationAnimal to face rightStationAnimal
+                leftStationAnimal.transform.rotation = Quaternion.Slerp(leftStationAnimal.transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
-            // Gradually rotate rightStationAnimal to face leftStationAnimal (optional)
-            rightStationAnimal.transform.rotation = Quaternion.Slerp(rightStationAnimal.transform.rotation, Quaternion.LookRotation(-direction), rotationSpeed * Time.deltaTime);
+                // Gradually rotate rightStationAnimal to face leftStationAnimal (optional)
+                rightStationAnimal.transform.rotation = Quaternion.Slerp(rightStationAnimal.transform.rotation, Quaternion.LookRotation(-direction), rotationSpeed * Time.deltaTime);
+            }
         }
     }
 
+    // Move the left and right station animals to the center and scale them down
     private void MoveObjectsToCenter()
     {
         if (leftStationAnimal != null && rightStationAnimal != null)
@@ -161,10 +168,10 @@ public class StationController : MonoBehaviour
             // Gradually scale down both objects
             ScaleDownObject(leftStationAnimal);
             ScaleDownObject(rightStationAnimal);
-
         }
     }
 
+    // Gradually scale down the given object
     private void ScaleDownObject(GameObject obj)
     {
         if (obj != null)
@@ -177,6 +184,7 @@ public class StationController : MonoBehaviour
         }
     }
 
+    // Triggered when the player stays in the collider
     void OnTriggerStay(Collider other)
     {
         if (other.CompareTag("Player"))
@@ -187,6 +195,7 @@ public class StationController : MonoBehaviour
                 // Check if the AnimalList in PlayerController has animals
                 if (playerController.CheckAnimalList())
                 {
+                    // Iterate through the player's animal list and spawn corresponding animals in the stations
                     for (int i = 0; i < playerController.animalList.Count; i++)
                     {
                         GameObject animal;
@@ -199,8 +208,10 @@ public class StationController : MonoBehaviour
                             animal = Instantiate(stationElephantPrefab, playerController.transform.position, Quaternion.identity);
                         }
 
+                        // Set the spawned animal as a child of the delivery point
                         animal.transform.parent = deliveryPoint[i].transform;
 
+                        // Assign the spawned animals to left and right stations
                         if (i == 0)
                         {
                             leftStationAnimal = animal;
@@ -210,25 +221,47 @@ public class StationController : MonoBehaviour
                             rightStationAnimal = animal;
                         }
 
+                        // Set up the parabola effect for the spawned animal
                         ParabolaEffect animalParabola = animal.GetComponent<ParabolaEffect>();
                         animalParabola.startPosition = playerController.transform.position;
                         animalParabola.target = deliveryPoint[i];
                         animalParabola.enabled = true;
                     }
+
+                    // Start the merge process
                     StartCoroutine(SetStartToRotate());
-                    playerController.animalList.Clear();
+
+                    // Clear the player's animal list
+                    playerController.ClearAnimalList();
                     spawn = false;
                 }
             }
         }
     }
 
+    // Triggered when the player exits the collider
     private void OnTriggerExit(Collider other)
     {
         if (other.tag.Equals("Player"))
         {
             timer = 0;
             spawn = true;
+        }
+    }
+
+    // Add XP based on the animal's species
+    private void AddXPFromStationAnimal(GameObject stationAnimal)
+    {
+        if (stationAnimal != null)
+        {
+            if (stationAnimal.name.Equals("Station Beetle"))
+            {
+                xPController.AddXP(Animal.AnimalEspecies.Beetle);
+            }
+            else
+            {
+                xPController.AddXP(Animal.AnimalEspecies.Elephant);
+            }
         }
     }
 }

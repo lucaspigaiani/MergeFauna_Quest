@@ -7,8 +7,8 @@ public class ParabolaEffect : MonoBehaviour
     public Transform target; // Assign the target player object in the Unity Editor
     public float duration = 1.0f; // Duration of the parabola movement
     public float height = 2.0f; // Height of the parabola
-    public float startScale; 
-    public float finalScale; 
+    public float startScale;
+    public float finalScale;
 
     private float startTime;
     public Vector3 startPosition;
@@ -16,15 +16,16 @@ public class ParabolaEffect : MonoBehaviour
 
     void Start()
     {
-        startTime = Time.time;
-        startPosition = transform.position;
-        targetPosition = target.position;
+        // Initialize start time and positions
+        InitializeParabola();
     }
 
     void Update()
     {
+        // Calculate the progress of the parabola movement
         float progress = (Time.time - startTime) / duration;
 
+        // If the parabola is still in progress
         if (progress < 1.0f)
         {
             // Calculate parabola height using Mathf.Lerp for smooth transition
@@ -43,15 +44,26 @@ public class ParabolaEffect : MonoBehaviour
         }
         else
         {
-            // Ensure the object reaches the target position
-            transform.position = targetPosition;
-            transform.localScale = new Vector3(finalScale, finalScale, finalScale);
-
-            // Optionally, you can destroy the object or deactivate it after reaching the target
-            // Destroy(gameObject);
-            // gameObject.SetActive(false);
-            this.enabled = false;
+            // Ensure the object reaches the target position and scale
+            CompleteParabola();
         }
+    }
 
+    // Method to initialize start time and positions
+    private void InitializeParabola()
+    {
+        startTime = Time.time;
+        startPosition = transform.position;
+        targetPosition = target.position;
+    }
+
+    // Method to complete the parabola movement
+    private void CompleteParabola()
+    {
+        // Set the final position and scale
+        transform.position = targetPosition;
+        transform.localScale = new Vector3(finalScale, finalScale, finalScale);
+
+        this.enabled = false; // Disable the script to stop further updates
     }
 }

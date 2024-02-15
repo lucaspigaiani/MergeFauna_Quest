@@ -5,22 +5,25 @@ using System.Collections;
 
 public class Animal : MonoBehaviour
 {
+    // Components
     protected Animator animator;
     protected NavMeshAgent navMeshAgent;
     protected ParabolaEffect parabolaEffect;
-    private PlayerController playerController;
+    protected PlayerController playerController;
 
+    // Attributes
+    public Image captureBarFillImage; // Reference to the UI image representing the fill bar
     protected float speed;
     protected float percentageCaptured;
-
     protected bool isOnCaptureArea = false;
     protected bool isRunning = false;
     protected float minimumWalkDistance = 10;
+    protected float avoidanceRadius = 3f;
+    protected int maxSampleAttempts = 10;
+    protected bool isAnimalCaptured;
+    protected float avoidDistance = 5f;
 
-    public float walkingRadius = 10f; // Radius for random walking
-    public float runAwayDistance = 20f; // Distance at which the animal starts running away from the player
-    public Image captureBarFillImage; // Reference to the UI image representing the fill bar
-
+    // Enums
     public enum AnimalEspecies
     {
         Beetle,
@@ -34,61 +37,53 @@ public class Animal : MonoBehaviour
         Walking,
         Running
     }
-
     public AnimalState currentState;
 
     // Constants for chance of variation
-    private const float WalkingVariationChance = 0.50f; // 50% chance of variation
+    private const float WalkingVariationChance = 0.5f; // 50% chance of variation
     private const float IdleVariationChance = 0.1f; // 10% chance of variation
-    private const float MinAnimationTime = 3f; // Minimum time to stay on a animation state
-    private const float MaxAnimationTime = 6f; // Max time to stay on a animation state
-
-    
+    private const float MinAnimationTime = 3f; // Minimum time to stay on an animation state
+    private const float MaxAnimationTime = 6f; // Max time to stay on an animation state
+    private const float CaptureRate = 20f; // 20% per second
 
     protected virtual void Start()
     {
+        // Initialization
         animator = GetComponent<Animator>();
         navMeshAgent = GetComponent<NavMeshAgent>();
         parabolaEffect = GetComponent<ParabolaEffect>();
-
-        player = GameObject.FindGameObjectWithTag("Player");
-        playerController = player.GetComponent<PlayerController>();
-
+        playerController = GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerController>();
         currentState = AnimalState.Idle;
         percentageCaptured = 100f; // Initialize to 100% captured
 
-        // Initiate the coroutine ChangeAnimationState at start
+        // Start animation state change coroutine
         StartCoroutine(ChangeAnimationState(0f));
 
+        // Deactivate capture bar initially
         captureBarFillImage.gameObject.SetActive(false);
     }
 
-    bool isAnimalCaptured;
-   
     protected virtual void Update()
     {
-        
-        if (percentageCaptured <= 0f && isAnimalCaptured == false)
+        // Check if the animal is fully captured
+        if (percentageCaptured <= 0f && !isAnimalCaptured)
         {
-            Debug.Log("CaptureAnimal!");
             CaptureAnimal();
             isAnimalCaptured = true;
         }
-
 
         // Check conditions for setting the current state based on other factors
         if (percentageCaptured < 100f)
         {
             currentState = AnimalState.Running;
-            
+
             // Update the capture bar UI
             UpdateCaptureBarUI();
 
-            if (isRunning == false)
+            if (!isRunning)
             {
                 PlayAnimation();
                 RunAwayFromPlayer();
-                Debug.Log("RunAwayFromPlayer!");
                 isRunning = true;
             }
         }
@@ -101,6 +96,8 @@ public class Animal : MonoBehaviour
                 isRunning = false;
             }
         }
+
+        // Check if the animal is walking and reached its destination
         if (currentState == AnimalState.Walking)
         {
             if (navMeshAgent.remainingDistance < 0.1f)
@@ -110,44 +107,35 @@ public class Animal : MonoBehaviour
             }
         }
 
+        // Check if the animal is running and reached its destination
         if (currentState == AnimalState.Running)
         {
-            if (navMeshAgent.remainingDistance < 0.25f)
+            if (navMeshAgent.remainingDistance < 0.1f)
             {
-                isRunning = false;
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.LeftControl))
-        {
-            // Toggle between pausing and resuming time
-            if (Time.timeScale == 0f)
-            {
-                // If time is already paused, resume it
-                Time.timeScale = 1f;
-            }
-            else
-            {
-                // If time is running, pause it
-                Time.timeScale = 0f;
+                if (isOnCaptureArea)
+                {
+                    RunAwayFromPlayer();
+                }
+                else
+                {
+                    SetRandomDestination();
+                }
             }
         }
     }
 
+    // Method to capture the animal
     private void CaptureAnimal()
     {
         navMeshAgent.isStopped = true;
-
         currentState = AnimalState.Idle;
         PlayAnimation();
-
         captureBarFillImage.gameObject.SetActive(false);
         parabolaEffect.enabled = true;
-
         playerController.captureAnimalEvent.Invoke();
-
     }
 
+    // Method to play the appropriate animation based on the current state
     protected virtual void PlayAnimation()
     {
         switch (currentState)
@@ -162,153 +150,149 @@ public class Animal : MonoBehaviour
                 Run();
                 break;
         }
-        Debug.Log($"Play animation: {currentState}");
     }
 
+    // Method to handle idle animation
     protected virtual void Idle()
     {
-        // Stop the walking and running animation
+        // Stop the idleVariation, walking and running animation
         animator.SetBool("IsWalking", false);
         animator.SetBool("IsRunning", false);
+        animator.SetBool("IsIdleVariation", false);
 
         // Play the idle animation
         animator.SetBool("IsIdle", true);
-        animator.SetBool("IsIdleVariation", false);
-        
+
         // Stop navmeshAgent
         navMeshAgent.isStopped = true;
+
         // Add a possibility of idle variation
         if (Random.Range(0f, 1f) < IdleVariationChance)
         {
-            animator.SetBool("IsIdle", false);
             animator.SetBool("IsIdleVariation", true);
         }
     }
 
+    // Method to handle walk animation
     protected virtual void Walk()
     {
-        // Play the walk animation
+        // Stop the idles and running animation
         animator.SetBool("IsIdle", false);
         animator.SetBool("IsIdleVariation", false);
-        animator.SetBool("IsWalking", true);
         animator.SetBool("IsRunning", false);
+
+        // Play the walk animation
+        animator.SetBool("IsWalking", true);
 
         // Play navmeshAgent
         navMeshAgent.isStopped = false;
-
         navMeshAgent.speed = 3f;
     }
 
-    private void SetRandomDestination()
+    // Method to set a random destination for the animal
+    protected void SetRandomDestination()
     {
-        // Attempt to find a valid position on the NavMesh within the walking radius
-        Vector3 randomDestination = FindValidRandomDestination();
+        // Generate a random position within the NavMesh area
+        Vector3 randomDestination = RandomNavMeshPosition(10f);
 
-        // Set the destination for the NavMeshAgent
+        // Set the NavMeshAgent's destination to the random position
         navMeshAgent.SetDestination(randomDestination);
     }
 
-    private Vector3 FindValidRandomDestination()
+    // Method to get a random position within the NavMesh area
+    protected Vector3 RandomNavMeshPosition(float radius)
     {
-        for (int i = 0; i < maxSampleAttempts; i++)
-        {
-            // Generate a random point within the walking radius
-            Vector2 randomPoint = Random.insideUnitCircle * walkingRadius;
-            Vector3 randomDestination = new Vector3(randomPoint.x, 0f, randomPoint.y) + transform.position;
+        Vector3 randomDirection = Random.insideUnitSphere * radius;
+        randomDirection += transform.position;
 
-            // Check if the distance to the random destination is greater than the minimum walk distance
-            if (Vector3.Distance(transform.position, randomDestination) > minimumWalkDistance)
-            {
-                // Check if the position is on the NavMesh
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(randomDestination, out hit, 1.0f, NavMesh.AllAreas))
-                {
-                    return hit.position;
-                }
-            }
-        }
+        NavMeshHit navMeshHit;
+        NavMesh.SamplePosition(randomDirection, out navMeshHit, radius, NavMesh.AllAreas);
 
-        Debug.Log("no valid position is found");
-        // If no valid position is found, return the current position
-        return transform.position;
+        return navMeshHit.position;
     }
 
+    // Method to handle run animation
     protected virtual void Run()
     {
-        // Play the run animation
+        // Stop the idles and walk animation
         animator.SetBool("IsIdle", false);
         animator.SetBool("IsIdleVariation", false);
         animator.SetBool("IsWalking", false);
+
+        // Play the run animation
         animator.SetBool("IsRunning", true);
 
         // Play navmeshAgent
         navMeshAgent.isStopped = false;
-
         navMeshAgent.speed = 4f;
-
-        Debug.Log("Animal is running away from the player.");
-    }
-    GameObject player;
-    public float avoidanceRadius = 3f;
-    public int maxSampleAttempts = 10;
-
-    private void RunAwayFromPlayer()
-    {
-        // Attempt to find a valid position away from the player
-        Vector3 runAwayPosition = FindValidRunAwayPosition();
-
-        // Set the destination for the NavMeshAgent to run away from the player
-        navMeshAgent.SetDestination(runAwayPosition);
     }
 
-    private Vector3 FindValidRunAwayPosition()
+    // Method to make the animal run away from the player
+    void RunAwayFromPlayer()
     {
-        for (int i = 0; i < maxSampleAttempts; i++)
+        // Calculate the opposite direction from the player
+        Vector3 oppositeDirection = transform.position - playerController.transform.position;
+
+        // Set the NavMeshAgent's destination to the opposite direction
+        Vector3 destination = transform.position + oppositeDirection;
+        if (Vector3.Distance(transform.position, destination) < avoidDistance)
         {
-            // Calculate a random direction away from the player
-            Vector3 randomDirection = Random.onUnitSphere * runAwayDistance;
+            // If the destination is too close, choose a position with some units ahead
+            destination = transform.position + oppositeDirection.normalized * avoidDistance;
+        }
+        navMeshAgent.SetDestination(destination);
 
-            // Ensure the position is away from the player
-            Vector3 potentialPosition = transform.position + randomDirection;
-
-            // Check if the position is outside the player's avoidance radius
-            if (Vector3.Distance(potentialPosition, player.transform.position) > avoidanceRadius)
+        // Check if the NavMeshAgent is at the edge of the NavMesh area
+        if (AtEdgeOfNavMesh())
+        {
+            // Choose a random side opposite to the player
+            Vector3 randomDirection = Quaternion.Euler(0, Random.Range(0, 360), 0) * oppositeDirection;
+            destination = transform.position + randomDirection;
+            if (Vector3.Distance(transform.position, destination) < avoidDistance)
             {
-                // Check if the position is on the NavMesh
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(potentialPosition, out hit, 1.0f, NavMesh.AllAreas))
-                {
-                    // Check if there's a clear path between the animal and the player
-                    if (!NavMesh.Raycast(transform.position, player.transform.position, out NavMeshHit raycastHit, NavMesh.AllAreas))
-                    {
-                        return hit.position;
-                    }
-                }
+                // If the destination is too close, choose a position with some units ahead
+                destination = transform.position + randomDirection.normalized * avoidDistance;
             }
+            navMeshAgent.SetDestination(destination);
+        }
+    }
+
+    // Method to check if the NavMeshAgent is at the edge of the NavMesh area
+    bool AtEdgeOfNavMesh()
+    {
+        NavMeshHit navMeshHit;
+
+        // Check if the NavMeshAgent's position is close to the edge
+        if (NavMesh.SamplePosition(transform.position, out navMeshHit, 0.1f, NavMesh.AllAreas))
+        {
+            return false;
         }
 
-        // If no valid position is found, return the current position
-        return transform.position;
+        return true;
     }
 
+    // Method to update the capture bar UI
     protected virtual void UpdateCaptureBarUI()
     {
-        
-        if (Vector3.Distance(transform.position, player.transform.position) > runAwayDistance)
+        if (!isOnCaptureArea)
         {
-            // Decrease percentage captured over time 
-            percentageCaptured += 20f * Time.deltaTime; // Increase by 20% per second 
+            percentageCaptured += CaptureRate * Time.deltaTime; // Increase by capture rate (0f-100f) per second 
+        }
+        else
+        {
+            percentageCaptured -= CaptureRate * Time.deltaTime; // Decrease by capture rate (0f-100f) per second 
         }
 
         // Update the UI fill bar based on the percentage captured
         captureBarFillImage.fillAmount = percentageCaptured / 100f; // Assuming the bar ranges from 0 to 1
     }
 
-    protected IEnumerator ChangeAnimationState(float waitTime) 
+    // Coroutine to change the animal state over time
+    protected IEnumerator ChangeAnimationState(float waitTime)
     {
         yield return new WaitForSeconds(waitTime);
 
-       if (currentState == AnimalState.Idle)
+        if (currentState == AnimalState.Idle)
         {
             if (Random.Range(0f, 1f) < WalkingVariationChance)
             {
@@ -327,7 +311,7 @@ public class Animal : MonoBehaviour
         StartCoroutine(ChangeAnimationState(newWaitTime));
     }
 
-
+    // OnTriggerEnter event handler
     protected void OnTriggerEnter(Collider other)
     {
         // Check if the triggering object has the "Player" tag
@@ -335,37 +319,43 @@ public class Animal : MonoBehaviour
         {
             // Play the corresponding animation based on the current state
             PlayAnimation();
-            if (playerController.canCapture == true)
+            if (playerController.canCapture)
             {
                 captureBarFillImage.gameObject.SetActive(true);
             }
-        }
-    }
 
-    protected virtual void OnTriggerStay(Collider other)
-    {
-        // Check if the triggering object has the "Player" tag
-        if (other.CompareTag("Player"))
-        {
-            if (playerController.canCapture == true && playerController.captureTarget == this)
-            {
-                // Increase percentage captured when staying in the trigger zone
-                percentageCaptured -= 20f * Time.deltaTime; // Decrease by 20% per second 
-                
-            }
-            if (isOnCaptureArea == false)
+            if (!isOnCaptureArea)
             {
                 isOnCaptureArea = true;
             }
         }
     }
 
+    // OnTriggerStay event handler
+    protected virtual void OnTriggerStay(Collider other)
+    {
+        // Check if the triggering object has the "Player" tag
+        if (other.CompareTag("Player"))
+        {
+            if (playerController.canCapture && playerController.captureTarget == this)
+            {
+                UpdateCaptureBarUI();
+                
+            }
+            if (!isOnCaptureArea)
+            {
+                isOnCaptureArea = true;
+            }
+        }
+    }
+
+    // OnTriggerExit event handler
     protected virtual void OnTriggerExit(Collider other)
     {
         // Check if the triggering object has the "Player" tag
         if (other.CompareTag("Player"))
         {
-            if (isOnCaptureArea == true)
+            if (isOnCaptureArea)
             {
                 isOnCaptureArea = false;
                 captureBarFillImage.gameObject.SetActive(false);

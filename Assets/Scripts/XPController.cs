@@ -41,7 +41,6 @@ public class XPController : MonoBehaviour
                 break;
 
             default:
-                Debug.LogError("Unknown animal type.");
                 break;
         }
 
